@@ -59,8 +59,6 @@ def elabSimpTheorems (stx : Syntax) (ctx : Simp.Context)
     let kind : SimpKind := if isSimpAll then .simpAll else .simp
     let result ←
       elabSimpArgs stx ctx simprocs (eraseLocal := true) (kind := kind)
-    if result.starArg then
-      throwError "aesop: simp builder currently does not support wildcard '*'"
     return (result.ctx, result.simprocs)
 
 -- HACK: This produces the syntax "[" lemmas,* "]" which is parsed by
