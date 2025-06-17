@@ -57,6 +57,8 @@ def elabSimpTheorems (stx : Syntax) (ctx : Simp.Context)
     TacticM (Simp.Context × Simp.SimprocsArray) :=
   withoutRecover do
     let kind : SimpKind := if isSimpAll then .simpAll else .simp
+    if let some ref := stx[1].getSepArgs.find? (·.getKind = ``Lean.Parser.Tactic.simpStar) then
+      throwErrorAt ref "aesop: simp builder currently does not support wildcard '*'"
     let result ←
       elabSimpArgs stx ctx simprocs (eraseLocal := true) (kind := kind)
     return (result.ctx, result.simprocs)
