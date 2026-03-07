@@ -72,20 +72,37 @@ def getConclusionDiscrTreeKeys (type : Expr) : MetaM (Array Key) :=
     -- turn into `Key.star`) but not fvars.
 
 def isEmptyTrie : Trie α → Bool
-  | .node vs children => vs.isEmpty && children.isEmpty
+  | .empty => true
+  | _ => false
 
 @[specialize]
 private partial def filterTrieM [Monad m] [Inhabited σ] (f : σ → α → m σ)
     (p : α → m (ULift Bool)) (init : σ) : Trie α → m (Trie α × σ)
-  | .node vs children => do
+  | .empty => return (.empty, init)
+  | .values vs child => do
     let (vs, acc) ← vs.foldlM (init := (#[], init)) λ (vs, acc) v => do
       if (← p v).down then
         return (vs.push v, acc)
       else
         return (vs, ← f acc v)
-    let (children, acc) ← go acc 0 children
+    let (child, acc) ← filterTrieM f p acc child
+    if vs.isEmpty then
+      return (child, acc)
+    else
+      return (.values vs child, acc)
+  | .path ks child => do
+    let (child, acc) ← filterTrieM f p init child
+    if isEmptyTrie child then
+      return (.empty, acc)
+    else
+      return (.path ks child, acc)
+  | .branch children => do
+    let (children, acc) ← go init 0 children
     let children := children.filter λ (_, c) => ! isEmptyTrie c
-    return (.node vs children, acc)
+    if children.isEmpty then
+      return (.empty, acc)
+    else
+      return (.branch children, acc)
   where
     go (acc : σ) (i : Nat) (children : Array (Key × Trie α)) :
         m (Array (Key × Trie α) × σ) := do
